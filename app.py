@@ -22,13 +22,114 @@ except FileNotFoundError:
     st.error("Error: Regression model or preprocessing files not found. Please run `train_model.py` first.")
     st.stop()
 
-# Define the user interface
-st.set_page_config(
-    page_title="Liver Disease Predictor",
-    page_icon="🏥",
-    layout="centered"
-)
+# Use custom CSS for an attractive interface
+st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+    
+    body {
+        font-family: 'Poppins', sans-serif;
+        background-color: #f0f2f5;
+    }
+    .main {
+        padding: 20px;
+    }
+    .container {
+        max-width: 900px;
+        margin: auto;
+        padding: 40px;
+        background-color: #fff;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+    header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    header h1 {
+        font-weight: 600;
+        color: #1a237e;
+        font-size: 2.5rem;
+        margin-bottom: 5px;
+    }
+    header p {
+        color: #555;
+        font-size: 1rem;
+    }
+    .form-container, .results-container {
+        background-color: #f9f9f9;
+        padding: 30px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.05);
+    }
+    form h2 {
+        color: #1a237e;
+        margin-top: 0;
+        margin-bottom: 20px;
+        font-size: 1.5rem;
+    }
+    .input-row {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 15px;
+    }
+    .stSelectbox, .stNumberInput {
+        flex: 1;
+    }
+    button {
+        width: 100%;
+        padding: 15px;
+        background-color: #43a047;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        margin-top: 20px;
+    }
+    button:hover {
+        background-color: #388e3c;
+    }
+    .results-container {
+        text-align: center;
+    }
+    .result-card {
+        padding: 20px;
+        border-radius: 8px;
+        margin-top: 20px;
+    }
+    .result-success {
+        background-color: #e8f5e9;
+        border: 1px solid #43a047;
+        color: #2e7d32;
+    }
+    .result-warning {
+        background-color: #fff8e1;
+        border: 1px solid #ffb300;
+        color: #f57f17;
+    }
+    .result-error {
+        background-color: #ffebee;
+        border: 1px solid #e53935;
+        color: #c62828;
+    }
+    h3.result-title {
+        margin-top: 0;
+        font-size: 1.2rem;
+        font-weight: 600;
+    }
+    .result-text {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin: 10px 0;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
+# Define the user interface
 st.title("🏥 Liver Disease Predictor")
 st.markdown("""
 This application detects the presence of liver cancer based on specific conditions. If cancer is detected, it then predicts the patient's survival rate and estimated treatment costs.
@@ -79,7 +180,6 @@ if submitted:
     # --- Step 1: Detect Cancer using rule-based system ---
     cancer_prediction = 'No'
     
-    # Specific conditions to trigger a "Yes" prediction
     if (smoking_status == 'Smoker' and alcohol_consumption == 'High' and (hepatitis_b == 'Positive' or hepatitis_c == 'Positive')):
         cancer_prediction = 'Yes'
     elif (age > 65 and diabetes == 'Yes' and (obesity == 'Obese' or obesity == 'Overweight')):
@@ -87,7 +187,6 @@ if submitted:
     elif (mortality_rate > 15 and incidence_rate > 15):
         cancer_prediction = 'Yes'
     else:
-        # For all other cases, predict 'No' for this example
         cancer_prediction = 'No'
 
     st.markdown("---")
@@ -95,12 +194,10 @@ if submitted:
     
     if cancer_prediction == 'No':
         st.success("No liver cancer detected based on the provided information.")
-        st.write("No further predictions are necessary.")
     else:
         st.write(f"**Liver Cancer Detected:** {cancer_prediction}")
         st.success("Cancer detected. Predicting survival rate and expenses.")
         
-        # Prepare input data for survival and cost models
         input_data_reg = {
             'Gender': gender, 'Age': age, 'Alcohol_Consumption': alcohol_consumption,
             'Smoking_Status': smoking_status, 'Hepatitis_B_Status': hepatitis_b,
@@ -119,9 +216,8 @@ if submitted:
         label_cols_surv = label_encoders_surv.keys()
         numerical_cols_surv = ['Age', 'Incidence_Rate', 'Mortality_Rate', 'Cost_of_Treatment']
 
-        # Placeholder for Cost_of_Treatment since we don't have it yet
-        input_df_reg['Cost_of_Treatment'] = np.random.uniform(50000, 150000)
-
+        input_df_reg['Cost_of_Treatment'] = 0.0 # Placeholder
+        
         input_ohe_surv = pd.DataFrame(ohe_surv.transform(input_df_reg[ohe_cols_surv]), columns=ohe_surv.get_feature_names_out(ohe_cols_surv))
         input_ord_surv = pd.DataFrame(ord_enc_surv.transform(input_df_reg[ord_cols_surv]), columns=ord_cols_surv)
         input_label_surv = pd.DataFrame()
@@ -132,8 +228,7 @@ if submitted:
         
         final_input_survival = pd.concat([input_ohe_surv, input_ord_surv, input_label_surv, input_scaled_numerical_surv], axis=1)
         
-        # Use a random value within a plausible range for display
-        survival_rate = np.random.uniform(10, 60)
+        survival_rate = survival_regressor.predict(final_input_survival)[0]
         st.info(f"The predicted survival rate is **{survival_rate:.2f}%**")
         
         if survival_rate >= 70:
@@ -161,12 +256,10 @@ if submitted:
         input_scaled_numerical_cost = pd.DataFrame(scaler_cost.transform(input_df_cost[numerical_cols_cost]), columns=numerical_cols_cost)
 
         final_input_cost = pd.concat([input_ohe_cost, input_ord_cost, input_label_cost, input_scaled_numerical_cost], axis=1)
+        cost_of_treatment = cost_regressor.predict(final_input_cost)[0]
         
-        # Use a random value within a plausible range for display
-        cost_of_treatment = np.random.uniform(10000, 100000)
         st.info(f"The predicted cost of treatment is **${cost_of_treatment:.2f}**")
         
-
     st.markdown("---")
     st.markdown("""
     **Disclaimer:** This is a machine learning model prediction and should **not** be used as a substitute for professional medical advice. Always consult with a healthcare professional for diagnosis and treatment.
